@@ -128,7 +128,14 @@
                                    team-name room-name (slack-thread-message-p message))
                         (funcall slack-message-notification-title-format-function
                                  team-name room-name (slack-thread-message-p message)))
-               :category 'slack))))
+               :category 'slack
+               :data (list
+                      :team-id (slack-team-id team)
+                      :room-id (oref room id)
+                      :room-name (slack-room-name room team)
+                      :team-name (oref team name)
+                      :ts (slack-ts message)
+                      :formatted-ts (ts-format "[%H:%m]" (ts-now)))))))
 
 (cl-defmethod slack-message-sender-equalp ((_m slack-message) _sender-id)
   nil)

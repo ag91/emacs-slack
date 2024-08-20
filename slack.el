@@ -149,19 +149,24 @@ When `never', never display typing indicator."
   :type 'boolean
   :group 'slack)
 
+(defcustom slack-before-quit-hook nil
+  "Hooks to run before quitting slack."
+  :type 'list
+  :group 'slack)
+
 ;;;###autoload
 (defun slack-start (&optional team)
   (interactive)
   (cl-labels ((start
-               (team)
-               (slack-team-kill-buffers team)
-               (slack-if-let* ((ws (and (slot-boundp team 'ws)
-                                        (oref team ws))))
-                   (progn
-                     (when (oref ws conn)
-                       (slack-ws--close ws team))
-                     (oset ws inhibit-reconnection nil)))
-               (slack-authorize team)))
+                (team)
+                (slack-team-kill-buffers team)
+                (slack-if-let* ((ws (and (slot-boundp team 'ws)
+                                         (oref team ws))))
+                    (progn
+                      (when (oref ws conn)
+                        (slack-ws--close ws team))
+                      (oset ws inhibit-reconnection nil)))
+                (slack-authorize team)))
     (if team
         (start team)
       (if (hash-table-empty-p slack-teams-by-token)
@@ -169,6 +174,16 @@ When `never', never display typing indicator."
         (cl-loop for team in (hash-table-values slack-teams-by-token)
                  do (start team))))
     (slack-enable-modeline)))
+
+;;;###autoload
+(defun slack-stop ()
+  "Quit all slack teams."
+  (interactive)
+  (seq-each
+   (lambda (it) (with-demoted-errors (slack-ws--close (oref it ws) it)))
+   (hash-table-values slack-teams-by-token))
+  (run-hooks 'slack-before-quit-hook)
+  (message "Slack stopped"))
 
 ;;;###autoload
 (defun slack-register-team (&rest plist)
@@ -203,18 +218,18 @@ Available options (property name, type, default value)
                     (read-from-minibuffer "Cookie: "))))
      (list :name name :token token :cookie cookie)))
   (cl-labels ((has-token-p (plist)
-                           (let ((token (plist-get plist :token)))
-                             (and token (< 0 (length token)))))
+                (let ((token (plist-get plist :token)))
+                  (and token (< 0 (length token)))))
               (register (team)
-                        (let ((same-team (slack-team-find-by-token (oref team token))))
-                          (if same-team
-                              (progn
-                                (slack-team-disconnect same-team)
-                                (slack-team-connect team))))
-                        (puthash (oref team token) team slack-teams-by-token)
-                        (if (plist-get plist :default)
-                            (setq slack-current-team team))
-                        (slack-user-prefs-update team)))
+                (let ((same-team (slack-team-find-by-token (oref team token))))
+                  (if same-team
+                      (progn
+                        (slack-team-disconnect same-team)
+                        (slack-team-connect team))))
+                (puthash (oref team token) team slack-teams-by-token)
+                (if (plist-get plist :default)
+                    (setq slack-current-team team))
+                (slack-user-prefs-update team)))
     (if (has-token-p plist)
         (let ((team (slack-create-team plist)))
           (register team))

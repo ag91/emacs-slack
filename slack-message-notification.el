@@ -91,7 +91,7 @@
   (and (not (slack-message-minep message team))
        (not (slack-room-muted-p room team))
        (or (slack-im-p room)
-           (and (slack-group-p room) (slack-mpim-p room))
+           (slack-group-p room)
            (slack-room-subscribedp room team)
            (slack-message-mentioned-p message team)
            (slack-message-subscribed-thread-message-p message room))))

@@ -28,6 +28,7 @@
 (require 'slack-util)
 (require 'slack-request)
 (require 'slack-conversations)
+(require 'slack-vars)
 
 (defvar slack-buffer-function)
 (defvar slack-completing-read-function)
@@ -92,7 +93,7 @@
   (with-slots (subscribed-channels) team
     (let ((name (slack-room-name room team)))
       (and name
-           (memq (intern name) subscribed-channels)))))
+           (memq (intern name) (append subscribed-channels slack-extra-subscribed-channels))))))
 
 (cl-defmethod slack-room-muted-p ((this slack-group) team)
   (seq-contains-p

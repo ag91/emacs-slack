@@ -253,5 +253,16 @@ Available options (property name, type, default value)
     (if team
         (slack-team-connect team))))
 
+(defun slack-jump-to-browser ()
+  "Attempt to jump from message at point to web slack app."
+  (interactive)
+  (if (slack-message-copy-link)
+      (progn
+        (message "Getting Slack link...")
+        (run-with-timer 1 nil
+                        (lambda ()
+                          (browse-url (string-replace "archives" "messages" (car kill-ring))))))
+    (message "No Slack message at point!")))
+
 (provide 'slack)
 ;;; slack.el ends here

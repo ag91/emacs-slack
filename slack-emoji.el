@@ -91,41 +91,40 @@
           :success #'on-success)))))
 
 (defun slack-select-emoji (team)
+  "Select emoji for TEAM."
+  (unless (< 0 (hash-table-count slack-emoji-master)) (slack-emoji-fetch-master-data (car (hash-table-values slack-teams-by-token))))
   (if (and (fboundp 'emojify-completing-read)
            (fboundp 'emojify-download-emoji-maybe))
       (progn (emojify-download-emoji-maybe)
              (cl-labels
                  ((select ()
-                          (emojify-completing-read "Select Emoji: "
-                                                   #'(lambda (data &rest args)
-                                                       (unless (null args)
-                                                         (slack-log (format "Invalid completing argments: %s, %s" data args)
-                                                                    team :level 'debug))
-                                                       (let ((emoji (car (split-string data " "))))
-                                                         (or (gethash emoji
-                                                                      slack-emoji-master
-                                                                      nil)
-                                                             (gethash emoji
-                                                                      (oref team emoji-master)
-                                                                      nil)))))))
-               (if (< 0 (hash-table-count slack-emoji-master))
-                   (select)
-                 (slack-emoji-fetch-master-data (car (hash-table-values slack-teams-by-token)))
-                 (select))))
-    (read-from-minibuffer "Emoji: ")))
+                    (emojify-completing-read "Select Emoji: "
+                                             #'(lambda (data &rest args)
+                                                 (unless (null args)
+                                                   (slack-log (format "Invalid completing arguments: %s, %s" data args)
+                                                              team :level 'debug))
+                                                 (let ((emoji (car (split-string data " "))))
+                                                   (or (gethash emoji
+                                                                slack-emoji-master
+                                                                nil)
+                                                       (gethash emoji
+                                                                (oref team emoji-master)
+                                                                nil)))))))
+               (select)))
+    (completing-read "Emoji: " (hash-table-keys slack-emoji-master))))
 
 (defun slack-emoji-fetch-master-data (team)
   (cl-labels
       ((success (&key data &allow-other-keys)
-                (slack-request-handle-error
-                 (data "slack-emoji-fetch-master-data")
-                 (cl-loop for emoji in data
-                          do (let ((short-names (plist-get emoji :short_names)))
-                               (when short-names
-                                 (cl-loop for name in short-names
-                                          do (puthash (format ":%s:" name)
-                                                      t
-                                                      slack-emoji-master))))))))
+         (slack-request-handle-error
+          (data "slack-emoji-fetch-master-data")
+          (cl-loop for emoji in data
+                   do (let ((short-names (plist-get emoji :short_names)))
+                        (when short-names
+                          (cl-loop for name in short-names
+                                   do (puthash (format ":%s:" name)
+                                               t
+                                               slack-emoji-master))))))))
     (slack-request
      (slack-request-create
       slack-emoji-master-data-url

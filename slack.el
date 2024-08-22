@@ -264,5 +264,16 @@ Available options (property name, type, default value)
                           (browse-url (string-replace "archives" "messages" (car kill-ring))))))
     (message "No Slack message at point!")))
 
+(defun slack-jump-to-app ()
+  "Attempt to jump from message at point to slack app."
+  (interactive)
+  (if (slack-message-copy-link)
+      (progn
+        (message "Getting Slack link...")
+        (run-with-timer 1 nil
+                        (lambda ()
+                          (browse-url (car kill-ring)))))
+    (message "No Slack message at point!")))
+
 (provide 'slack)
 ;;; slack.el ends here

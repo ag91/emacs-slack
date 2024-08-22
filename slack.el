@@ -275,5 +275,48 @@ Available options (property name, type, default value)
                           (browse-url (car kill-ring)))))
     (message "No Slack message at point!")))
 
+(defun slack-quote-and-reply (quote)
+  "Prefix QUOTE to reply if region active on a slack message."
+  (interactive
+   (list
+    (if (and (slack-get-ts) (region-active-p))
+        (substring-no-properties (funcall region-extract-function))
+      (error "Need region active on Slack message for this to work"))))
+  (goto-char (point-max))
+  (insert (concat
+           (string-join
+            (seq-map
+             (lambda (it) (concat "> " it) )
+             (string-split quote "\n"))
+            "\n")
+           "\n"))
+  (goto-char (point-max)))
+
+(defun slack-quote-and-reply-with-link (quote)
+  "Prefix QUOTE and its link to reply if region active on a slack message."
+  (interactive
+   (list
+    (when (region-active-p)
+      (substring-no-properties (funcall region-extract-function)))))
+  (if (slack-message-copy-link)
+      (progn
+        (message "Getting Slack link...")
+        (run-with-timer 1 nil
+                        (lambda ()
+                          (goto-char (point-max))
+                          (insert (concat
+                                   "from: "
+                                   (car kill-ring)
+                                   "\n"
+                                   (string-join
+                                    (seq-map
+                                     (lambda (it) (concat "> " it) )
+                                     (string-split quote "\n"))
+                                    "\n")
+                                   "\n"
+                                   ))
+                          (goto-char (point-max)))))
+    (message "No Slack message at point!")))
+
 (provide 'slack)
 ;;; slack.el ends here

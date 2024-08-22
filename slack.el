@@ -179,9 +179,7 @@ When `never', never display typing indicator."
 (defun slack-stop ()
   "Quit all slack teams."
   (interactive)
-  (seq-each
-   (lambda (it) (with-demoted-errors (slack-ws--close (oref it ws) it)))
-   (hash-table-values slack-teams-by-token))
+  (slack-ws-close)
   (run-hooks 'slack-before-quit-hook)
   (message "Slack stopped"))
 

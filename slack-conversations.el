@@ -100,10 +100,17 @@
        (slack-request-handle-error
         (data "conversations" #'log-error)
         (slack-if-let* ((warning (plist-get data :warning)))
-            (slack-log (format "%s" (replace-underscore-with-space
-                                     warning))
-                       team
-                       :level 'warn)
+            (progn
+              (slack-log (format "%s" (replace-underscore-with-space
+                                       warning))
+                         team
+                         :level 'warn)
+              (if
+                  (and (equal "already_in_channel" warning)
+                       (functionp on-success)
+                       )
+                  (funcall on-success data)
+                (slack-log "Not sending message because of above warning" team :level 'error)))
           (when (functionp on-success)
             (funcall on-success data))))))))
 

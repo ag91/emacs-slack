@@ -26,6 +26,7 @@
 (require 'eieio)
 (require 'slack-util)
 (require 'slack-team-ws)
+(require 'dash)
 
 (declare-function emojify-create-emojify-emojis "emojify")
 
@@ -158,6 +159,12 @@ use `slack-change-current-team' to change `slack-current-team'"
   (let ((token (gethash id slack-tokens-by-id)))
     (when token
       (slack-team-find-by-token token))))
+
+(defun slack-team-find-by-domain (team-domain)
+  "Go from TEAM-DOMAIN to team."
+  (--find
+   (equal team-domain (oref it domain))
+   (hash-table-values slack-teams-by-token)))
 
 (cl-defmethod slack-team--delete ((this slack-team))
   (remhash (oref this id) slack-tokens-by-id)

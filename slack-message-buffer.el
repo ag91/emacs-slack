@@ -638,10 +638,12 @@
   (slack-if-let* ((buf slack-current-buffer))
       (slack-buffer-display-user-profile buf)))
 
-(defun slack-room-display (room team)
+(defun slack-room-display (room team &optional success-callback)
+  "Display TEAM ROOM.
+Provide SUCCESS-CALLBACK to run some action after displaying."
   (cl-labels
       ((open (buf)
-             (slack-buffer-display buf)))
+         (slack-buffer-display buf)))
     (let ((buf (slack-buffer-find 'slack-message-buffer team room)))
       (if buf (open buf)
         (message "No Message in %s, fetching from server..." (slack-room-name room team))
@@ -650,7 +652,8 @@
          room team
          :after-success #'(lambda (messages cursor)
                             (slack-room-set-messages room messages team)
-                            (open (slack-create-message-buffer room cursor team))))))))
+                            (slack-buffer-display (slack-create-message-buffer room cursor team))
+                            (funcall success-callback)))))))
 
 (cl-defmethod slack-room-update-buffer ((this slack-room) team message replace)
   (slack-if-let* ((buffer (slack-buffer-find 'slack-message-buffer team this)))
@@ -902,12 +905,16 @@
                                                  ts)))
     (slack-buffer-display buf)))
 
-(cl-defmethod slack-thread-show-messages ((this slack-message) room team)
+(cl-defmethod slack-thread-show-messages ((this slack-message) room team &optional success-callback)
+  "Open messages for ROOM TEAM SLACK-MESSAGE thread.
+Call SUCCESS-CALLBACK in the thread buffer.
+A way to use that is to select the right point of the buffer."
   (cl-labels
       ((after-success (_next-cursor has-more)
-                      (let ((buf (slack-create-thread-message-buffer
-                                  room team (slack-thread-ts this) has-more)))
-                        (slack-buffer-display buf))))
+         (let ((buf (slack-create-thread-message-buffer
+                     room team (slack-thread-ts this) has-more)))
+           (slack-buffer-display buf)
+           (funcall success-callback))))
     (slack-thread-replies this room team
                           :after-success #'after-success)))
 

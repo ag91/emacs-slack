@@ -318,55 +318,39 @@ Available options (property name, type, default value)
                           (goto-char (point-max)))))
     (message "No Slack message at point!")))
 
-
-(defun slack-team-name-to-team (team-name)
-  "Go from TEAM-NAME to team."
-  (let ((slack-completing-read-function
-         (lambda (prompt collection &optional predicate require-match
-                         initial-input hist def inherit-input-method)
-           (s-trim team-name))))
-    (slack-team-select)))
-
-(defun slack-get-positions-by-ts ()
-  "Make a alist ts - point for a slack buffer."
-  (save-excursion
-    (when (equal major-mode 'slack-message-buffer-mode) ;; is slack buffer
-      (let (its-pos)
-        (--keep (when-let ((ts (get-text-property it 'ts))) (list ts it)) (-iota (point-max) 1))))))
-
 (defun slack-open-url (url)
   "Open a slack URL in emacs-slack."
   (interactive
    (list (or (when (url-p (car kill-ring)) (read-string "Enter slack url:")))))
   (if-let* ((_ (string-match "https://\\(.*\\).slack.com/archives/\\(.*\\)/p\\(.*\\)" url))
-            (team-id (match-string 1 url))
-            (team (slack-team-name-to-team team-id))
+            (team-domain (match-string 1 url))
+            (team (slack-team-find-by-domain team-domain))
             (room-id (match-string 2 url))
-            (room (--> team
-                       slack-team-channels
-                       (--find (equal room-id (oref it id)) it)))
+            (room (or
+                   (--> team
+                        slack-team-ims
+                        (--find (equal room-id (oref it id)) it))
+                   (--> team
+                        slack-team-channels
+                        (--find (equal room-id (oref it id)) it))
+                   ))
             (ts-s (match-string 3 url))
             (ts (--> ts-s
                      (s-split "?" it)
                      car
                      (concat (substring it 0 (- (length it) 6)) "." (substring it (- (length it) 6) (length it))))))
-      (progn
-        (if-let ((thread-message
-                  (and
-                   (string-match "thread_ts=\\([0-9]*\\.[0-9]*\\)" ts-s)
-                   (slack-room-find-message room (match-string 1 ts-s)))))
-            (slack-thread-show-messages thread-message room team)
-          (slack-room-display room team)
-          )
-        (run-with-timer 2 nil
-                        `(lambda () (ignore-errors
-                                      (when (equal major-mode 'slack-message-buffer-mode)
-                                        (message "-- attempting to go to %s" (list ,ts (--find (equal (car it) ,ts) (slack-get-positions-by-ts))))
-                                        (--> (slack-get-positions-by-ts)
-                                             (--find (equal (car it) ,ts) it)
-                                             (nth 1 it)
-                                             goto-char)))))
-        nil)
+      (if-let* ((go-to-link-position `(lambda ()
+                                        (message "-- attempting to get to slack position %s" ,ts)
+                                        (-some--> (slack-get-positions-by-ts)
+                                          (--find (equal (car it) ,ts) it)
+                                          (nth 1 it)
+                                          goto-char)))
+                (thread-message
+                 (and
+                  (string-match "thread_ts=\\([0-9]*\\.[0-9]*\\)" ts-s)
+                  (slack-room-find-message room (match-string 1 ts-s)))))
+          (slack-thread-show-messages thread-message room team go-to-link-position)
+        (slack-room-display room team go-to-link-position))
     (error (format "Not an url: %s" url))
     ))
 (provide 'slack)

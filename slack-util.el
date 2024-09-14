@@ -30,6 +30,7 @@
 (require 'timer)
 (require 'diary-lib)
 (require 'websocket)
+(require 'dash)
 
 (defvar slack-completing-read-function)
 (defvar slack-buffer-function)
@@ -99,6 +100,9 @@
                                  value)))))))
 
 (defun slack-get-ts ()
+  "Find the first slack ts for line.
+Note: each line has many timestamps,
+if you need them all use `slack-get-positions-by-ts'."
   (let ((bol (point-at-bol))
         (eol (point-at-eol)))
     (when (and bol eol)
@@ -106,6 +110,12 @@
                for ts = (get-text-property i 'ts)
                if ts
                return ts))))
+
+(defun slack-get-positions-by-ts ()
+  "Make a alist ts - point for a slack buffer."
+  (save-excursion
+    (--keep (when-let ((ts (get-text-property it 'ts))) (list ts it)) (-iota (point-max) 1))))
+
 
 (defun slack-linkfy (text link)
   (if (not (slack-string-blankp link))
@@ -215,6 +225,11 @@ ones and overrule settings in the other lists."
             " ")))
 
 (cl-defun slack-format-ts (ts &optional (format "%Y-%m-%d %H:%M:%S"))
+  "Go from TS to readable string following FORMAT.
+Note the input timestamp must drop the last 6 digits.
+
+>> (slack-format-ts \"\1726244896\")
+=> \"2024-09-13 17:28:16\""
   (when ts
     (when (stringp ts)
       (setq ts (string-to-number ts)))

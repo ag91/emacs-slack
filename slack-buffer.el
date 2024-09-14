@@ -183,7 +183,7 @@
       (error (progn
                (slack-if-let* ((buf (get-buffer (slack-buffer-name this))))
                    (kill-buffer buf))
-               (ignore-errors
+               (with-demoted-errors "slack-buffer-display swallowed error: %s"
                  (slack-log (format "Backtrace: %S" (with-output-to-string (backtrace)))
                             (slack-buffer-team this)
                             :level 'error))

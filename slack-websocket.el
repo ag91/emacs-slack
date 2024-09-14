@@ -266,6 +266,7 @@
 
     (slack-team-kill-buffers
      team :except '(slack-message-buffer
+                    slack-thread-message-buffer
                     slack-message-edit-buffer
                     slack-message-share-buffer
                     slack-room-message-compose-buffer))))

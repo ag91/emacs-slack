@@ -256,24 +256,13 @@ Available options (property name, type, default value)
 (defun slack-jump-to-browser ()
   "Attempt to jump from message at point to web slack app."
   (interactive)
-  (if (slack-message-copy-link)
-      (progn
-        (message "Getting Slack link...")
-        (run-with-timer 1 nil
-                        (lambda ()
-                          (browse-url (string-replace "archives" "messages" (car kill-ring))))))
-    (message "No Slack message at point!")))
+  (slack-message-copy-link
+   (lambda (link) (browse-url (string-replace "archives" "messages" link)))))
 
 (defun slack-jump-to-app ()
   "Attempt to jump from message at point to slack app."
   (interactive)
-  (if (slack-message-copy-link)
-      (progn
-        (message "Getting Slack link...")
-        (run-with-timer 1 nil
-                        (lambda ()
-                          (browse-url (car kill-ring)))))
-    (message "No Slack message at point!")))
+  (slack-message-copy-link #'browse-url))
 
 (defun slack-quote-and-reply (quote)
   "Prefix QUOTE to reply if region active on a slack message."
@@ -296,27 +285,24 @@ Available options (property name, type, default value)
   "Prefix QUOTE and its link to reply if region active on a slack message."
   (interactive
    (list
-    (when (region-active-p)
-      (substring-no-properties (funcall region-extract-function)))))
-  (if (slack-message-copy-link)
-      (progn
-        (message "Getting Slack link...")
-        (run-with-timer 1 nil
-                        (lambda ()
-                          (goto-char (point-max))
-                          (insert (concat
-                                   "from: "
-                                   (car kill-ring)
-                                   "\n"
-                                   (string-join
-                                    (seq-map
-                                     (lambda (it) (concat "> " it) )
-                                     (string-split quote "\n"))
-                                    "\n")
-                                   "\n"
-                                   ))
-                          (goto-char (point-max)))))
-    (message "No Slack message at point!")))
+    (if (region-active-p)
+        (substring-no-properties (funcall region-extract-function))
+      "")))
+  (slack-message-copy-link
+   (lambda (link)
+     (goto-char (point-max))
+     (insert (concat
+              "from: "
+              link
+              "\n"
+              (string-join
+               (seq-map
+                (lambda (it) (concat "> " it) )
+                (string-split quote "\n"))
+               "\n")
+              "\n"
+              ))
+     (goto-char (point-max)))))
 
 (defun slack-open-url (url)
   "Open a slack URL in emacs-slack."

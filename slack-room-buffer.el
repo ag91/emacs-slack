@@ -112,18 +112,21 @@
       (lui-delete #'(lambda () (equal (get-text-property (point) 'ts)
                                       ts))))))
 
-(cl-defmethod slack-buffer-copy-link ((this slack-room-buffer) ts)
+(cl-defmethod slack-buffer-copy-link ((this slack-room-buffer) ts &optional success-callback)
+  "Use slack permakink api to retrieve an http link to the message at TS.
+SUCCESS-CALLBACK allows you to run a function on that permalink."
   (slack-if-let* ((team (slack-buffer-team this))
                   (room (slack-buffer-room this))
                   (message (slack-room-find-message room ts))
                   (template "https://%s.slack.com/archives/%s/p%s%s"))
       (cl-labels
           ((on-success (&key data &allow-other-keys)
-                       (slack-request-handle-error
-                        (data "slack-get-permalink")
-                        (let ((permalink (plist-get data :permalink)))
-                          (kill-new permalink)
-                          (message "Link Copied to Clipboard")))))
+             (slack-request-handle-error
+              (data "slack-get-permalink")
+              (let ((permalink (plist-get data :permalink)))
+                (kill-new permalink)
+                (message "Link Copied to Clipboard")
+                (funcall success-callback permalink)))))
         (slack-request
          (slack-request-create
           slack-get-permalink-url
@@ -351,9 +354,11 @@
   (slack-if-let* ((buf slack-current-buffer))
       (slack-buffer-delete-message buf (slack-get-ts))))
 
-(defun slack-message-copy-link ()
+(defun slack-message-copy-link (&optional success-callback)
+  "Copy permalink at point.
+Optionally pass SUCCESS-CALLBACK to perform an action on the permalink obtained."
   (interactive)
-  (slack-buffer-copy-link slack-current-buffer (slack-get-ts)))
+  (slack-buffer-copy-link slack-current-buffer (slack-get-ts) success-callback))
 
 (defun slack-message-test-notification ()
   "Debug notification.

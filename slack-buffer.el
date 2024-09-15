@@ -56,6 +56,10 @@
     (define-key map (kbd "RET") #'slack-load-more-message)
     map))
 
+;; to have working link buttons
+;; https://github.com/yuya373/emacs-slack/issues/547#issuecomment-1542119271
+(advice-add 'lui-buttonize-urls :before-until (lambda () (derived-mode-p 'slack-mode)))
+
 (define-derived-mode slack-mode lui-mode "Slack"
   ""
   (setq-local default-directory slack-default-directory)
@@ -260,7 +264,7 @@
   (slack-buffer-cant-execute this))
 (cl-defmethod slack-buffer-display-user-profile ((this slack-buffer))
   (slack-buffer-cant-execute this))
-(cl-defmethod slack-buffer-copy-link ((this slack-buffer) _ts)
+(cl-defmethod slack-buffer-copy-link ((this slack-buffer) _ts &optional _success-callback)
   (slack-buffer-cant-execute this))
 (cl-defmethod slack-file-upload-params ((this slack-buffer))
   (slack-buffer-cant-execute this))

@@ -327,10 +327,7 @@ Available options (property name, type, default value)
                      (concat (substring it 0 (- (length it) 6)) "." (substring it (- (length it) 6) (length it))))))
       (if-let* ((go-to-link-position `(lambda ()
                                         (message "-- attempting to get to slack position %s" ,ts)
-                                        (-some--> (slack-get-positions-by-ts)
-                                          (--find (equal (car it) ,ts) it)
-                                          (nth 1 it)
-                                          goto-char)))
+                                        (slack-buffer-goto ,ts)))
                 (thread-message
                  (and
                   (string-match "thread_ts=\\([0-9]*\\.[0-9]*\\)" ts-s)

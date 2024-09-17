@@ -126,7 +126,7 @@ SUCCESS-CALLBACK allows you to run a function on that permalink."
               (let ((permalink (plist-get data :permalink)))
                 (kill-new permalink)
                 (message "Link Copied to Clipboard")
-                (funcall success-callback permalink)))))
+                (when (functionp success-callback) (funcall success-callback permalink))))))
         (slack-request
          (slack-request-create
           slack-get-permalink-url

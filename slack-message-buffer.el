@@ -653,7 +653,7 @@ Provide SUCCESS-CALLBACK to run some action after displaying."
          :after-success #'(lambda (messages cursor)
                             (slack-room-set-messages room messages team)
                             (slack-buffer-display (slack-create-message-buffer room cursor team))
-                            (funcall success-callback)))))))
+                            (when (functionp success-callback) (funcall success-callback))))))))
 
 (cl-defmethod slack-room-update-buffer ((this slack-room) team message replace)
   (slack-if-let* ((buffer (slack-buffer-find 'slack-message-buffer team this)))
@@ -914,7 +914,7 @@ A way to use that is to select the right point of the buffer."
          (let ((buf (slack-create-thread-message-buffer
                      room team (slack-thread-ts this) has-more)))
            (slack-buffer-display buf)
-           (funcall success-callback))))
+           (when (functionp success-callback) (funcall success-callback)))))
     (slack-thread-replies this room team
                           :after-success #'after-success)))
 

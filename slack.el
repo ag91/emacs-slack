@@ -307,7 +307,9 @@ Available options (property name, type, default value)
 (defun slack-open-url (url)
   "Open a slack URL in emacs-slack."
   (interactive
-   (list (or (when (url-p (car kill-ring)) (read-string "Enter slack url:")))))
+   (list (cond ((url-p (car kill-ring)) (car kill-ring))
+               ((thing-at-point 'url) (thing-at-point 'url))
+               (t (read-string "Enter slack url:")))))
   (if-let* ((_ (string-match "https://\\(.*\\).slack.com/archives/\\(.*\\)/p\\(.*\\)" url))
             (team-domain (match-string 1 url))
             (team (slack-team-find-by-domain team-domain))

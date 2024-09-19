@@ -790,5 +790,13 @@
 
     (slack-file-upload file "png" "image.png")))
 
+(defun slack-join-huddle (team-id room-id)
+  "Start a huddle in room with ROOM-ID and team with TEAM-ID.
+Note this requires you are signed in on Slack in your default browser."
+  (interactive (list
+                (oref (nth 1 (slack-current-room-and-team)) id)
+                (oref (nth 0 (slack-current-room-and-team)) id)))
+  (browse-url (format "https://app.slack.com/huddle/%s/%s" team-id room-id)))
+
 (provide 'slack-buffer)
 ;;; slack-buffer.el ends here

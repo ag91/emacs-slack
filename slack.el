@@ -338,5 +338,13 @@ Available options (property name, type, default value)
         (slack-room-display room team go-to-link-position))
     (error (format "Not an url: %s" url))
     ))
+
+(defun slack-kill-all-buffers ()
+  "Kill all slack buffers."
+  (interactive)
+  (-each
+      (--filter (s-starts-with-p "*slack" (buffer-name it)) (buffer-list))
+    'kill-buffer))
+
 (provide 'slack)
 ;;; slack.el ends here

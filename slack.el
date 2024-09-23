@@ -156,6 +156,28 @@ When `never', never display typing indicator."
   :type 'list
   :group 'slack)
 
+(defcustom slack-refresh-token-instructions "
+Using Chrome, open and sign into the slack customization page, e.g. https://my.slack.com/customize
+Right click anywhere on the page and choose \"inspect\" from the context menu. This will open the Chrome developer tools.
+Find the console (it's one of the tabs in the developer tools window)
+At the prompt (\"> \") type the following: window.prompt(\"your api token is: \", TS.boot_data.api_token)
+Copy the displayed token elsewhere.
+If your token starts with xoxc then keep following the other steps below, otherwise you are done and can close the window.
+--- YOU ARE HERE ---
+Now switch to the Applications tab in the Chrome developer tools (or Storage tab in Firefox developer tools).
+Expand Cookies in the left-hand sidebar.
+Click the cookie entry named d and copy its value. Note, use the default encoded version, so don't click the Show URL decoded checkbox.
+ALSO take the d-s cookie and store as 'xoxd-xxxxxxxx; d-s=xxxxxx'.
+Now you're done and can close the window.
+
+For further explanation, see the documentation for the emojme project: (github.com/jackellenberger/emojme)
+
+Note that it is only possible to obtain the cookie manually, not through client-side javascript, due to it being set as HttpOnly and Secure. See OWASP HttpOnly.
+"
+  "Instruction to refresh slack tokens."
+  :type 'string
+  :group 'slack)
+
 ;;;###autoload
 (defun slack-start (&optional team)
   (interactive)
@@ -345,6 +367,17 @@ Available options (property name, type, default value)
   (-each
       (--filter (s-starts-with-p "*slack" (buffer-name it)) (buffer-list))
     'kill-buffer))
+
+(defun slack-refresh-token ()
+  "Refresh slack tokens helper."
+  (interactive)
+  ;; https://github.com/yuya373/emacs-slack/issues/566#issuecomment-1208866953
+  (message "Deleting %s to clear old Slack cookies" (request--curl-cookie-jar))
+  (delete-file (request--curl-cookie-jar))
+  (kill-new "window.prompt(\"your api token is: \", TS.boot_data.api_token)")
+  (browse-url "https://my.slack.com/customize")
+  (switch-to-buffer-other-window (get-buffer-create "instructions"))
+  (insert slack-refresh-token-instructions))
 
 (provide 'slack)
 ;;; slack.el ends here

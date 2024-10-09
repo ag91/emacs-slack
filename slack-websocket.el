@@ -51,10 +51,12 @@
 (require 'slack-star-event)
 (require 'slack-room-event)
 (require 'slack-thread-event)
+(require 'slack-defcustoms)
 
 (defconst slack-api-test-url "https://slack.com/api/api.test")
 (defconst slack-rtm-connect-url "https://slack.com/api/rtm.connect")
 (defconst slack-api-client-userboot-url "https://slack.com/api/client.userBoot")
+
 
 (defun slack-ws-on-timeout (team-id)
   (let* ((team (slack-team-find team-id))
@@ -253,9 +255,12 @@
                    :ws-url (oref ws reconnect-url))))
 
 (defun slack-ws-on-reconnect-open (team-id)
+  "Refresh data after websocket reconnection for TEAM-ID.
+This also closes unnecessary buffers and refresh message buffer contents."
   (let* ((team (slack-team-find team-id)))
     (slack-conversations-list-update team)
-    ;; (slack-user-list-update team)
+    ;; attempt at updating the user list in a delayed manner so to not hit user limit
+    (run-with-idle-timer 3 nil #'slack-user-list-update team)
 
     (slack-dnd-status-team-info team)
     (when (hash-table-p (oref team slack-message-buffer))
@@ -949,40 +954,37 @@ lots of public channels."
   (interactive)
   (message ">> slack-conversations-list-update running!")
   (let ((team (or team (slack-team-select))))
-    (slack-conversations-list-update-quick team)
+    (when slack-update-quick (slack-conversations-list-update-quick team))
     (cl-labels
         ((success (channels groups ims)
-                  (slack-team-set-channels team channels)
-                  (slack-team-set-groups team groups)
-                  (slack-team-set-ims team ims)
-                  (slack-counts-update team)
-                  (slack-user-info-request
-                   (mapcar #'(lambda (im) (oref im user))
-                           (slack-team-ims team))
-                   team)
-                  (slack-team-send-presence-sub team)
-                  (when (functionp after-success)
-                    (funcall after-success team))
-                  (message ">> Slack is ready!")
-                  (slack-log "Slack Channel List Updated"
-                             team :level 'info)
-                  (slack-log "Slack Group List Updated"
-                             team :level 'info)
-                  (slack-log "Slack Im List Updated"
-                             team :level 'info)))
+           (slack-team-set-channels team channels)
+           (slack-team-set-groups team groups)
+           (slack-team-set-ims team ims)
+           (slack-counts-update team)
+           (slack-user-info-request
+            (mapcar #'(lambda (im) (oref im user))
+                    (slack-team-ims team))
+            team)
+           (slack-team-send-presence-sub team)
+           (when (functionp after-success)
+             (funcall after-success team))
+           (message ">> Slack is ready!")
+           (slack-log "Slack Channel List Updated"
+                      team :level 'info)
+           (slack-log "Slack Group List Updated"
+                      team :level 'info)
+           (slack-log "Slack Im List Updated"
+                      team :level 'info)))
       (slack-conversations-list
        team #'success
-       ;; Do not update public_channel.
+       ;; Do not update public_channel unless slack-update-quick is nil.
        ;; `slack-conversations-list-update-quick' fetches all joined
        ;; public channels already.
-
-       ;; TODO: Maybe bind this behavior to a variable.  If non-nil,
-       ;; do not use userBoot and simply get all public channels. Or
-       ;; maybe have multiple values that controls how channels are
-       ;; fetched.
-       '("private_channel"
-         "mpim"
-         "im")))))
+       (append
+        '("private_channel"
+          "mpim"
+          "im")
+        (unless slack-update-quick (list "public_channel")))))))
 
 (defun slack-im-list-update (&optional team after-success)
   (interactive)

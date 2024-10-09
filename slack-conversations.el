@@ -30,6 +30,7 @@
 (require 'slack-modeline)
 (require 'slack-message)
 (require 'slack-create-message)
+(require 'slack-defcustoms)
 
 (defcustom slack-exclude-archived-channels t
   "If t, filter out archived channels for listing and selection. If nil, include archived channels."
@@ -292,47 +293,55 @@
         :success (slack-conversations-success-handler team))))))
 
 (defun slack-conversations-list (team success-callback &optional types)
+  "Retrieve the list of conversations for TEAM.
+Run SUCCESS-CALLBACK on success. Also limit to conversation TYPES when provided."
   (let ((cursor nil)
         (channels nil)
         (groups nil)
         (ims nil)
-        (types (or types (list "private_channel"
-                               "mpim"
-                               "im")))
+        (types (or types
+                   ;; Do not update public_channel unless slack-update-quick is nil.
+                   ;; `slack-conversations-list-update-quick' fetches all joined
+                   ;; public channels already.
+                   (append
+                    '("private_channel"
+                      "mpim"
+                      "im")
+                    (unless slack-update-quick (list "public_channel")))))
         (loop-count 0))
     (cl-labels
         ((on-success
-          (&key data &allow-other-keys)
-          (slack-request-handle-error
-           (data "slack-conversations-list")
-           (cl-loop for c in (plist-get data :channels)
-                    do (cond
-                        ((eq t (plist-get c :is_channel))
-                         (push (slack-room-create c 'slack-channel)
-                               channels))
-                        ((eq t (plist-get c :is_im))
-                         (push (slack-room-create c 'slack-im)
-                               ims))
-                        ((eq t (plist-get c :is_group))
-                         (push (slack-room-create c 'slack-group)
-                               groups))))
-           (slack-if-let*
-               ((meta (plist-get data :response_metadata))
-                (next-cursor (plist-get meta :next_cursor))
-                (has-cursor (< 0 (length next-cursor)))
-                ;; Do not fetch after page 100. We are going to get
-                ;; rate limited here, according to my experience.
-                (not-too-much (< loop-count 80)))
-               (progn
-                 (setq cursor next-cursor)
-                 (setq loop-count (1+ loop-count))
-                 (run-at-time
-                  (* 0.3 (log loop-count)) nil
-                  (lambda ()
-                    (slack-log (format ">> Fetching next cursor... Page: %s." loop-count) team :level 'info)
-                    (request))))
-             (progn
-               (funcall success-callback channels groups ims)))))
+           (&key data &allow-other-keys)
+           (slack-request-handle-error
+            (data "slack-conversations-list")
+            (cl-loop for c in (plist-get data :channels)
+                     do (cond
+                         ((eq t (plist-get c :is_channel))
+                          (push (slack-room-create c 'slack-channel)
+                                channels))
+                         ((eq t (plist-get c :is_im))
+                          (push (slack-room-create c 'slack-im)
+                                ims))
+                         ((eq t (plist-get c :is_group))
+                          (push (slack-room-create c 'slack-group)
+                                groups))))
+            (slack-if-let*
+                ((meta (plist-get data :response_metadata))
+                 (next-cursor (plist-get meta :next_cursor))
+                 (has-cursor (< 0 (length next-cursor)))
+                 ;; Do not fetch after page 100. We are going to get
+                 ;; rate limited here, according to my experience.
+                 (not-too-much (< loop-count 80)))
+                (progn
+                  (setq cursor next-cursor)
+                  (setq loop-count (1+ loop-count))
+                  (run-at-time
+                   (* 0.3 (log loop-count)) nil
+                   (lambda ()
+                     (slack-log (format ">> Fetching next cursor... Page: %s." loop-count) team :level 'info)
+                     (request))))
+              (progn
+                (funcall success-callback channels groups ims)))))
          (request ()
            (slack-request
             (slack-request-create

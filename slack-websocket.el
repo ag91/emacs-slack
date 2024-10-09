@@ -274,7 +274,8 @@ This also closes unnecessary buffers and refresh message buffer contents."
                     slack-thread-message-buffer
                     slack-message-edit-buffer
                     slack-message-share-buffer
-                    slack-room-message-compose-buffer))))
+                    slack-room-message-compose-buffer
+                    slack-search-result-buffer-mode))))
 
 (defun slack-ws--reconnect (team-id &optional force)
   (let* ((team (slack-team-find team-id))

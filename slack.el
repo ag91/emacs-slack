@@ -379,5 +379,29 @@ Available options (property name, type, default value)
   (switch-to-buffer-other-window (get-buffer-create "instructions"))
   (insert slack-refresh-token-instructions))
 
+(defun slack-show-channel-bookmarks (channel-id team)
+  "Show an org mode buffer with the bookmarks of CHANNEL-ID for TEAM."
+  (interactive (let ((room-and-team (slack-current-room-and-team)))
+                 (list
+                  (ignore-errors (oref (nth 0 room-and-team) id)) ;; if-let takes care of errors
+                  (nth 1 room-and-team))))
+  (if-let* ((on-success
+             (lambda (data)
+               (-some--> data
+                 (plist-get it :bookmarks)
+                 (let ((b "*slack bookmarks for channel*"))
+                   (with-help-window b
+                     (with-current-buffer b
+                       (insert "* Bookmarks\n\n")
+                       (org-mode)
+                       (slack-override-keybiding-in-buffer
+                        (kbd "q")
+                        'bury-buffer)
+                       )
+                     (--each it
+                       (with-current-buffer b
+                         (insert (format "- [[%s][%s]]\n" (plist-get it :link) (plist-get it :title)))))))))))
+      (slack-bookmarks-request channel-id team on-success)
+    (error "slack: Cannot show slack bookmarks here")))
 (provide 'slack)
 ;;; slack.el ends here

@@ -239,9 +239,19 @@ Note the input timestamp must drop the last 6 digits.
   (let ((messages args))
     (mapconcat #'identity
                (cl-remove-if #'(lambda (e) (or (null e)
-                                          (< (length e) 1)))
+                                               (< (length e) 1)))
                              messages)
                "\n")))
+
+(defun slack-override-keybiding-in-buffer (key command)
+  "Override KEY with COMMAND in buffer."
+  (interactive "KSet key buffer-locally: \nCSet key %s buffer-locally to command: ")
+  (let ((oldmap (current-local-map))
+        (newmap (make-sparse-keymap)))
+    (when oldmap
+      (set-keymap-parent newmap oldmap))
+    (define-key newmap key command)
+    (use-local-map newmap)))
 
 (provide 'slack-util)
 ;;; slack-util.el ends here

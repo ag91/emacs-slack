@@ -37,6 +37,7 @@
 (defvar slack-completing-read-function)
 
 (defconst slack-channel-update-mark-url "https://slack.com/api/channels.mark")
+(defconst slack-bookmarks-url "https://slack.com/api/bookmarks.list")
 
 (defclass slack-channel (slack-group)
   ((is-member :initarg :is_member :initform nil :type boolean)))
@@ -85,6 +86,23 @@
   (seq-contains-p
    (plist-get (oref team user-prefs) :muted_channels)
    (oref this id)))
+
+(defun slack-bookmarks-request (channel-id team &optional after-success)
+  "Request bookmarks for CHANNEL-ID of TEAM.
+Run an action on the data returned with AFTER-SUCCESS."
+  (cl-labels
+      ((on-success (&key data &allow-other-keys)
+         ;; TODO possibly do something like display these in the room
+         (slack-request-handle-error
+          (data "slack-bookmarks-request")
+          (if after-success
+              (funcall after-success data)))))
+    (slack-request
+     (slack-request-create
+      slack-bookmarks-url
+      team
+      :params (list (cons "channel_id" channel-id))
+      :success #'on-success))))
 
 (provide 'slack-channel)
 ;;; slack-channel.el ends here

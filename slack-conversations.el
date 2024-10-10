@@ -349,7 +349,8 @@ Run SUCCESS-CALLBACK on success. Also limit to conversation TYPES when provided.
              team
              :params (list (cons "types" (mapconcat #'identity types ","))
                            (and slack-exclude-archived-channels (cons "exclude_archived" "true"))
-                           (and cursor (cons "cursor" cursor)))
+                           (and cursor (cons "cursor" cursor))
+                           (cons "limit" "999"))
              :success #'on-success))))
       (request))))
 

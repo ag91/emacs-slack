@@ -32,6 +32,8 @@ You can see some gifs on the [wiki](https://github.com/yuya373/emacs-slack/wiki/
 
 [How to get token and cookie](#how-to-get-token-and-cookie)
 
+If your token expires, you can use `slack-refresh-token` for a way to refresh interactively.
+
 ```elisp
 ;; I'm using use-package and el-get and evil
 
@@ -209,6 +211,15 @@ Some terminology in the `slack-` functions:
 - `slack-file-upload`
   - uploads a file
   - the command allows to choose many channels via select loop. In order to finish the loop input an empty string. For helm that's <kbd>C+RET</kbd> or <kbd>M+TET</kbd>. In case of Ivy it's <kbd>C+M+j</kbd>.
+
+### Tip
+
+If your Slack team has a huge number of public channels, you may find
+you hit your token rate limit. If that happens, set `(setq
+slack-quick-update t)`: it will avoid the hit of rate limiting at
+expense of functionality (like you will not have all public channel
+available and search will not display room names when it doesn't know
+about them).
 
 ## Notification
 

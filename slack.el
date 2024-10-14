@@ -350,7 +350,6 @@ Available options (property name, type, default value)
                      car
                      (concat (substring it 0 (- (length it) 6)) "." (substring it (- (length it) 6) (length it))))))
       (if-let* ((go-to-link-position `(lambda ()
-                                        (message "-- attempting to get to slack position %s" ,ts)
                                         (slack-buffer-goto ,ts)))
                 (thread-message
                  (and
@@ -403,5 +402,15 @@ Available options (property name, type, default value)
                          (insert (format "- [[%s][%s]]\n" (plist-get it :link) (plist-get it :title)))))))))))
       (slack-bookmarks-request channel-id team on-success)
     (error "slack: Cannot show slack bookmarks here")))
+
+(defun slack-search-result-open-message ()
+  "Open url in search result page."
+  (interactive)
+  (if-let ((url (get-text-property (point) 'permalink)))
+      (slack-open-url url)
+    (error "Not possible to jump to message because permalink is not defined")))
+
+(define-key slack-search-result-buffer-mode-map (kbd "RET") 'slack-search-result-open-message)
+
 (provide 'slack)
 ;;; slack.el ends here

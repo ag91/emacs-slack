@@ -105,7 +105,8 @@
       (propertize (format "%s\n%s"
                           header
                           (slack-message-to-string (oref this message) team))
-                  'ts (slack-ts this)))))
+                  'ts (slack-ts this)
+                  'permalink (ignore-errors (oref this permalink))))))
 
 (cl-defmethod slack-ts ((this slack-search-message))
   (slack-ts (oref this message)))
@@ -144,17 +145,17 @@
                 (plist-get payload :next)))
          (next-2 (slack-search-create-around-message
                   (plist-get payload :next_2)))
-         (room (slack-room-find (oref channel id) team)))
-
+         (room (slack-room-find (oref channel id) team))
+         (permalink (plist-get payload :permalink)))
     (unless (< 0 (length (plist-get payload :user)))
       (plist-put payload :user nil)
       (plist-put payload :subtype "bot_message"))
-
     (make-instance 'slack-search-message
                    :message (slack-message-create payload team room)
                    :channel channel
                    :previous-2 previous-2
                    :previous previous
+                   :permalink permalink
                    :next next
                    :next-2 next-2)))
 

@@ -92,6 +92,7 @@ use `slack-change-current-team' to change `slack-current-team'"
    (slack-thread-message-compose-buffer :initform nil :type (or null hash-table))
    (slack-stars-buffer :initform nil :type (or null hash-table))
    (slack-search-result-buffer :initform nil :type (or null hash-table))
+   (slack-activity-feed-buffer :initform nil :type (or null hash-table))
    (slack-dialog-buffer :initform nil :type (or null hash-table))
    (slack-dialog-edit-element-buffer :initform nil :type (or null hash-table))
    (slack-room-info-buffer :initform nil :type (or null hash-table))

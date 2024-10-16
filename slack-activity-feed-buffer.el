@@ -107,7 +107,34 @@ Run an action on the data returned with AFTER-SUCCESS."
       (propertize (concat header
                           (when-let ((author (slack-user-name author-id team))) (format " from %s" author))
                           "\n"
-                          "  TODO I need to translate channel - thread-ts to message body\n"
+                          (or (ignore-errors (when thread-ts
+                                               (let* ((message (slack-room-find-message room ts))
+                                                      (on-success (lambda (messages _next-cursor)
+                                                                    (add-to-list 'x (car messages))
+                                                                    (setq message (car messages)))))
+                                                 ;; (message "hey11-- %s " (list (oref room id) thread-ts ts))
+                                                 (unless message
+                                                   (if (and
+                                                        nil ;; TODO somehow not all threads are found
+                                                        (message "hey-- %s " (list ts thread-ts (and (stringp thread-ts) (not (string-equal ts thread-ts)))))
+                                                        (stringp thread-ts)
+                                                        (not (string-equal ts thread-ts)))
+                                                       (slack-conversations-replies room thread-ts team
+                                                                                    ;; :latest thread-ts
+                                                                                    :inclusive "true"
+                                                                                    :limit "1"
+                                                                                    :after-success on-success)
+                                                     (slack-conversations-history room team
+                                                                                  :latest ts
+                                                                                  :inclusive "true"
+                                                                                  :limit "1"
+                                                                                  :after-success on-success)))
+                                                 (while (null message)
+                                                   (accept-process-output nil 0.1))
+                                                 (slack-message-body message team)
+                                                 )
+                                               ))
+                              "TODO")
                           )
                   'ts ts
                   ;; 'permalink (ignore-errors (oref this permalink)) ;; TODO likely possible to achieve)
@@ -240,7 +267,7 @@ Run an action on the data returned with AFTER-SUCCESS."
                                              :message (make-instance
                                                        'activity-message
                                                        :ts (format "%s" (plist-get m :ts))
-                                                       :channel (and (message "hey-- %s " (list m (plist-get m :channel)))(format "%s" (plist-get m :channel)))
+                                                       :channel (format "%s" (plist-get m :channel))
                                                        :is-broadcast (jbool (plist-get m :is_broadcast))
                                                        :thread-ts (format "%s" (plist-get m :thread_ts))
                                                        :author-id (format "%s" (plist-get m :author_user_id)))

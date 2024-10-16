@@ -67,6 +67,7 @@
 (require 'slack-file-info-buffer)
 (require 'slack-thread-message-compose-buffer)
 (require 'slack-search-result-buffer)
+(require 'slack-activity-feed-buffer)
 (require 'slack-stars-buffer)
 (require 'slack-dialog-buffer)
 (require 'slack-dialog-edit-element-buffer)

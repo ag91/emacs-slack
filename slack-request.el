@@ -381,25 +381,25 @@
 (cl-defun slack-curl-downloader (url name &key (success nil) (error nil) (token nil) (cookie nil))
   (cl-labels
       ((sentinel (proc event)
-                 (cond
-                  ((string-equal "finished\n" event)
-                   (when (functionp success) (funcall success)))
-                  (t
-                   (let ((status (process-status proc))
-                         (output (with-current-buffer (process-buffer proc)
-                                   (buffer-substring-no-properties (point-min)
-                                                                   (point-max)))))
-                     (if (functionp error)
-                         (funcall error status output url name)
-                       (message "Download Failed. STATUS: %s, EVENT: %s, URL: %s, NAME: %s, OUTPUT: %s"
-                                status
-                                event
-                                url
-                                name
-                                output))
-                     (if (file-exists-p name)
-                         (delete-file name))
-                     (delete-process proc))))))
+         (cond
+          ((string-equal "finished\n" event)
+           (when (functionp success) (funcall success)))
+          (t
+           (let ((status (process-status proc))
+                 (output (with-current-buffer (process-buffer proc)
+                           (buffer-substring-no-properties (point-min)
+                                                           (point-max)))))
+             (if (functionp error)
+                 (funcall error status output url name)
+               (warn "slack-curl-downloader: Download Failed. STATUS: %s, EVENT: %s, URL: %s, NAME: %s, OUTPUT: %s"
+                     status
+                     event
+                     url
+                     name
+                     output))
+             (if (file-exists-p name)
+                 (delete-file name))
+             (delete-process proc))))))
     (let* ((url-obj (url-generic-parse-url url))
            (need-token-p (and url-obj
                               token

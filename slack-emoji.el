@@ -40,55 +40,58 @@
 (defvar slack-emoji-master (make-hash-table :test 'equal :size 1600))
 
 (defun slack-download-emoji (team after-success)
-  (if (require 'emojify nil t)
-      (cl-labels
-          ((handle-alias (name emojis)
-                         (let* ((raw-url (plist-get emojis name))
-                                (alias (if (string-prefix-p "alias:" raw-url)
-                                           (intern (format ":%s" (cadr (split-string raw-url ":")))))))
-                           (or
-                            (and (not raw-url) (handle-alias (intern ":slack") emojis)) ;some aliases are b0rked
-                            (and (string-prefix-p "alias:" raw-url) ;recursive alias
-                                 (handle-alias (intern (replace-regexp-in-string "alias" "" raw-url)) emojis))
-                            (and alias (or (plist-get emojis alias)
-                                           (let ((emoji (emojify-get-emoji (format "%s:" alias))))
-                                             (if emoji
-                                                 (concat (emojify-image-dir) "/" (gethash "image" emoji))))))
-                            raw-url)))
-           (push-new-emoji (emoji)
-                           (puthash (car emoji) t (oref team emoji-master))
-                           (cl-pushnew emoji emojify-user-emojis
-                                       :test #'string=
-                                       :key #'car))
-           (on-success
-            (&key data &allow-other-keys)
-            (slack-request-handle-error
-             (data "slack-download-emoji")
-             (emojify-create-emojify-emojis)
-             (let* ((emojis (plist-get data :emoji))
-                    (paths nil))
-               (cl-loop for (name _) on emojis by #'cddr
-                        do (let* ((url (handle-alias name emojis))
-                                  (path (if (file-exists-p url) url
-                                          (slack-image-path url)))
-                                  (emoji (cons (format "%s:" name)
-                                               (list (cons "name" (substring (symbol-name name) 1))
-                                                     (cons "image" path)
-                                                     (cons "style" "github")))))
-                             (if (file-exists-p path)
-                                 (push-new-emoji emoji)
-                               (slack-url-copy-file
-                                url
-                                path
-                                :success #'(lambda () (push-new-emoji emoji))))
+  (when (require 'emojify nil t)
+    ;; create slack image file directory if it doesn't exist, otherwise curl complains
+    (ignore-errors (mkdir slack-image-file-directory 'parent-if-needed))
+    (cl-labels
+        ((handle-alias (name emojis)
+           (let* ((raw-url (plist-get emojis name))
+                  (alias (if (string-prefix-p "alias:" raw-url)
+                             (intern (format ":%s" (cadr (split-string raw-url ":")))))))
+             (or
+              (and (not raw-url) (handle-alias (intern ":slack") emojis)) ;some aliases are b0rked
+              (and (string-prefix-p "alias:" raw-url) ;recursive alias
+                   (handle-alias (intern (replace-regexp-in-string "alias" "" raw-url)) emojis))
+              (and alias (or (plist-get emojis alias)
+                             (let ((emoji (emojify-get-emoji (format "%s:" alias))))
+                               (if emoji
+                                   (concat (emojify-image-dir) "/" (gethash "image" emoji))))))
+              raw-url)))
+         (push-new-emoji (emoji)
+           (puthash (car emoji) t (oref team emoji-master))
+           (cl-pushnew emoji emojify-user-emojis
+                       :test #'string=
+                       :key #'car))
+         (on-success
+           (&key data &allow-other-keys)
+           (slack-request-handle-error
+            (data "slack-download-emoji")
+            (emojify-create-emojify-emojis)
+            (let* ((emojis (plist-get data :emoji))
+                   (paths nil))
+              (cl-loop for (name _) on emojis by #'cddr
+                       do (let* ((url (handle-alias name emojis))
+                                 (path (if (file-exists-p url) url
+                                         (slack-image-path url)))
+                                 (emoji (cons (format "%s:" name)
+                                              (list (cons "name" (substring (symbol-name name) 1))
+                                                    (cons "image" path)
+                                                    (cons "style" "github")))))
+                            (if (file-exists-p path)
+                                (push-new-emoji emoji)
+                              (slack-url-copy-file
+                               url
+                               path
+                               :success #'(lambda () (push-new-emoji emoji)))
+                              )
 
-                             (push path paths)))
-               (funcall after-success paths)))))
-        (slack-request
-         (slack-request-create
-          slack-emoji-list
-          team
-          :success #'on-success)))))
+                            (push path paths)))
+              (when (functionp after-success) (funcall after-success paths))))))
+      (slack-request
+       (slack-request-create
+        slack-emoji-list
+        team
+        :success #'on-success)))))
 
 (defun slack-select-emoji (team)
   "Select emoji for TEAM."
